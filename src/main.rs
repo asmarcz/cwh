@@ -276,5 +276,15 @@ mod tests {
                 Ok(2),
             )
         }
+
+        #[test]
+        fn errors() {
+            assert_eq!(to_result("/ 2 0"),
+                       Err(String::from("Division by zero.")));
+            assert_eq!(to_result("fact -5"),
+                       Err(String::from("Expected a non-negative number as an argument to factorial.")));
+            assert_eq!(to_result("$2"),
+                       Err(String::from("Invalid variable index '2'.")));
+        }
     }
 }
