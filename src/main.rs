@@ -130,5 +130,17 @@ mod tests {
                 right: Box::new(Variable(1)),
             }));
         }
+
+        #[test]
+        fn errors() {
+            assert_eq!(to_result(""),
+                       Err(String::from("Expected arguments at the end of input.")));
+            assert_eq!(to_result("$a"),
+                       Err(String::from("Expected valid number as a variable name, instead got '$a'.")));
+            assert_eq!(to_result("* 1"),
+                       Err(String::from("Binary operator '*' expected two arguments.")));
+            assert_eq!(to_result("!#"),
+                       Err(String::from("Unexpected input '!#'.")));
+        }
     }
 }
