@@ -179,4 +179,37 @@ mod tests {
                        Err(String::from("Unexpected input '!#'.")));
         }
     }
+
+    mod evaluator {
+        use crate::*;
+
+        fn to_result(str: &str) -> Result<isize, String> {
+            let mut history: Vec<isize> = Vec::new();
+            for line in str.lines() {
+                let mut iter = line.split_whitespace();
+                match evaluate_value(&parse_value(&mut iter).unwrap(), &history) {
+                    Ok(int) => history.push(int),
+                    Err(msg) => return Err(msg),
+                }
+            }
+            Ok(*history.last().unwrap())
+        }
+
+        #[test]
+        fn priority() {
+            assert_eq!(to_result("* + 3 - 2 1 / 16 4"), Ok(16))
+        }
+
+        #[test]
+        fn sequence() {
+            assert_eq!(
+                to_result(r#"
+                    + 3 2
+                    * 2 5
+                    / $1 $0
+                "#.trim()),
+                Ok(2),
+            )
+        }
+    }
 }
