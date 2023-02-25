@@ -2,18 +2,19 @@ use std::io;
 use std::io::Write;
 use std::str::{FromStr, SplitWhitespace};
 
-use crate::Operator::{Division, Minus, Multiplication, Plus};
-use crate::Value::{BinaryOperation, Int, Variable};
+use crate::BinaryOperator::{Division, Minus, Multiplication, Plus};
+use crate::UnaryOperator::{Abs, Factorial, Negative, Predecessor, Signum, Successor};
+use crate::Value::{BinaryOperation, Int, UnaryOperation, Variable};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Operator {
+enum BinaryOperator {
     Division,
     Minus,
     Multiplication,
     Plus,
 }
 
-impl FromStr for Operator {
+impl FromStr for BinaryOperator {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -27,14 +28,52 @@ impl FromStr for Operator {
     }
 }
 
+fn factorial(n: usize) -> usize {
+    if n == 0 {
+        1
+    } else {
+        n * factorial(n - 1)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum UnaryOperator {
+    Abs,
+    Factorial,
+    Negative,
+    Predecessor,
+    Signum,
+    Successor,
+}
+
+impl FromStr for UnaryOperator {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "abs" => Ok(Abs),
+            "fact" | "!" => Ok(Factorial),
+            "neg" => Ok(Negative),
+            "pred" => Ok(Predecessor),
+            "sgn" => Ok(Signum),
+            "succ" => Ok(Successor),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum Value {
     BinaryOperation {
-        operator: Operator,
+        operator: BinaryOperator,
         left: Box<Value>,
         right: Box<Value>,
     },
     Int(isize),
+    UnaryOperation {
+        operator: UnaryOperator,
+        arg: Box<Value>,
+    },
     Variable(usize),
 }
 
@@ -52,9 +91,9 @@ fn parse_value(iter: &mut SplitWhitespace) -> Result<Value, String> {
                 }
             }
             num if num.parse::<isize>().is_ok() => Ok(Int(num.parse::<isize>().unwrap())),
-            op if Operator::from_str(op).is_ok() => match (parse_value(iter), parse_value(iter)) {
+            op if BinaryOperator::from_str(op).is_ok() => match (parse_value(iter), parse_value(iter)) {
                 (Ok(left), Ok(right)) => Ok(BinaryOperation {
-                    operator: Operator::from_str(op).unwrap(),
+                    operator: BinaryOperator::from_str(op).unwrap(),
                     left: Box::new(left),
                     right: Box::new(right),
                 }),
@@ -62,6 +101,13 @@ fn parse_value(iter: &mut SplitWhitespace) -> Result<Value, String> {
                     Err(format!("Binary operator '{}' expected two arguments.", op))
                 }
             },
+            op if UnaryOperator::from_str(op).is_ok() => match parse_value(iter) {
+                Ok(value) => Ok(UnaryOperation {
+                    operator: UnaryOperator::from_str(op).unwrap(),
+                    arg: Box::new(value),
+                }),
+                Err(_) => Err(format!("Unary operator '{}' expected an argument.", op))
+            }
             _ => Err(format!("Unexpected input '{}'.", str)),
         },
     }
@@ -87,10 +133,29 @@ fn evaluate_value(value: &Value, variables: &[isize]) -> Result<isize, String> {
             }
         }
         Int(int) => Ok(*int),
+        UnaryOperation { operator, arg } => {
+            match evaluate_value(arg, variables) {
+                Ok(int) => match operator {
+                    Abs => Ok(int.abs()),
+                    Negative => Ok(-int),
+                    Factorial => {
+                        if int.is_positive() {
+                            Ok(factorial(int as usize) as isize)
+                        } else {
+                            Err(String::from("Expected a non-negative number as an! argument to factorial."))
+                        }
+                    }
+                    Predecessor => Ok(int - 1),
+                    Signum => Ok(int.signum()),
+                    Successor => Ok(int + 1),
+                }
+                Err(msg) => Err(msg),
+            }
+        }
         Variable(idx) => match variables.get(*idx) {
             None => Err(format!("Invalid variable index '{}'.", idx)),
             Some(int) => Ok(*int),
-        }
+        },
     }
 }
 
