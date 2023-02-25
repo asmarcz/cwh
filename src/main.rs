@@ -179,7 +179,12 @@ fn main() {
     let mut history: Vec<isize> = Vec::new();
     new_prompt();
     for line in io::stdin().lines() {
-        match process_line(line.unwrap(), &history) {
+        let line = line.unwrap();
+        if line.is_empty() {
+            new_prompt();
+            continue;
+        }
+        match process_line(line, &history) {
             Ok(result) => {
                 history.push(result);
                 println!("{}", result);
@@ -188,6 +193,7 @@ fn main() {
         }
         new_prompt();
     }
+    println!();
 }
 
 #[cfg(test)]
