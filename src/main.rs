@@ -92,25 +92,22 @@ fn main() {
 
 mod tests {
     mod parser {
-        use std::str::SplitWhitespace;
-
         use crate::*;
 
-        fn to_iter(str: &str) -> SplitWhitespace {
-            str.split_whitespace()
+        fn to_result(str: &str) -> Result<Value, String> {
+            let mut iter = str.split_whitespace();
+            parse_value(&mut iter)
         }
 
         #[test]
         fn expressions() {
-            let mut iter = to_iter("+ 3 2");
-            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+            assert_eq!(to_result("+ 3 2"), Ok(BinaryOperation {
                 operator: Plus,
                 left: Box::new(Int(3)),
                 right: Box::new(Int(2)),
             }));
 
-            let mut iter = to_iter("+ 3 * 8 / 2 3");
-            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+            assert_eq!(to_result("+ 3 * 8 / 2 3"), Ok(BinaryOperation {
                 operator: Plus,
                 left: Box::new(Int(3)),
                 right: Box::new(BinaryOperation {
@@ -127,8 +124,7 @@ mod tests {
 
         #[test]
         fn variables() {
-            let mut iter = to_iter("- $0 $1");
-            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+            assert_eq!(to_result("- $0 $1"), Ok(BinaryOperation {
                 operator: Minus,
                 left: Box::new(Variable(0)),
                 right: Box::new(Variable(1)),
