@@ -66,6 +66,33 @@ fn parse_value(iter: &mut SplitWhitespace) -> Result<Value, String> {
     }
 }
 
+fn evaluate_value(value: &Value, variables: &[isize]) -> Result<isize, String> {
+    match value {
+        BinaryOperation { operator, left, right } => {
+            match (evaluate_value(left, variables), evaluate_value(right, variables)) {
+                (Ok(lhs), Ok(rhs)) => {
+                    match operator {
+                        Division => {
+                            if rhs == 0 {
+                                Err(String::from("Division by zero."))
+                            } else { Ok(lhs / rhs) }
+                        }
+                        Minus => Ok(lhs - rhs),
+                        Multiplication => Ok(lhs * rhs),
+                        Plus => Ok(lhs + rhs),
+                    }
+                }
+                (Err(msg), _) | (_, Err(msg)) => Err(msg),
+            }
+        }
+        Int(int) => Ok(*int),
+        Variable(idx) => match variables.get(*idx) {
+            None => Err(format!("Invalid variable index '{}'.", idx)),
+            Some(int) => Ok(*int),
+        }
+    }
+}
+
 fn process_line(line: String, history: &mut Vec<isize>) -> Result<(), String> {
     let mut iter = line.split_whitespace();
     match parse_value(&mut iter) {
