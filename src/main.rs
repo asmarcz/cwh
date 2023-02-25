@@ -142,7 +142,7 @@ fn evaluate_value(value: &Value, variables: &[isize]) -> Result<isize, String> {
                         if int.is_positive() {
                             Ok(factorial(int as usize) as isize)
                         } else {
-                            Err(String::from("Expected a non-negative number as an! argument to factorial."))
+                            Err(String::from("Expected a non-negative number as an argument to factorial."))
                         }
                     }
                     Predecessor => Ok(int - 1),
