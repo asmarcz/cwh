@@ -125,6 +125,7 @@ fn main() {
     }
 }
 
+#[cfg(test)]
 mod tests {
     mod parser {
         use crate::*;
