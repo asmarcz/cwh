@@ -4,7 +4,7 @@ use std::str::{FromStr, SplitWhitespace};
 use crate::Operator::{Division, Minus, Multiplication, Plus};
 use crate::Value::{BinaryOperation, Int, Variable};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 enum Operator {
     Division,
     Minus,
@@ -26,6 +26,7 @@ impl FromStr for Operator {
     }
 }
 
+#[derive(Debug, PartialEq)]
 enum Value {
     BinaryOperation {
         operator: Operator,
@@ -85,6 +86,53 @@ fn main() {
                 _ => {}
             },
             Err(e) => eprintln!("{}", e),
+        }
+    }
+}
+
+mod tests {
+    mod parser {
+        use std::str::SplitWhitespace;
+
+        use crate::*;
+
+        fn to_iter(str: &str) -> SplitWhitespace {
+            str.split_whitespace()
+        }
+
+        #[test]
+        fn expressions() {
+            let mut iter = to_iter("+ 3 2");
+            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+                operator: Plus,
+                left: Box::new(Int(3)),
+                right: Box::new(Int(2)),
+            }));
+
+            let mut iter = to_iter("+ 3 * 8 / 2 3");
+            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+                operator: Plus,
+                left: Box::new(Int(3)),
+                right: Box::new(BinaryOperation {
+                    operator: Multiplication,
+                    left: Box::new(Int(8)),
+                    right: Box::new(BinaryOperation {
+                        operator: Division,
+                        left: Box::new(Int(2)),
+                        right: Box::new(Int(3)),
+                    }),
+                }),
+            }));
+        }
+
+        #[test]
+        fn variables() {
+            let mut iter = to_iter("- $0 $1");
+            assert_eq!(parse_value(&mut iter), Ok(BinaryOperation {
+                operator: Minus,
+                left: Box::new(Variable(0)),
+                right: Box::new(Variable(1)),
+            }));
         }
     }
 }
