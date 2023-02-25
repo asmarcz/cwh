@@ -1,4 +1,5 @@
 use std::io;
+use std::io::Write;
 use std::str::{FromStr, SplitWhitespace};
 
 use crate::Operator::{Division, Minus, Multiplication, Plus};
@@ -93,27 +94,34 @@ fn evaluate_value(value: &Value, variables: &[isize]) -> Result<isize, String> {
     }
 }
 
-fn process_line(line: String, history: &mut Vec<isize>) -> Result<(), String> {
+fn process_line(line: String, history: &[isize]) -> Result<isize, String> {
     let mut iter = line.split_whitespace();
     match parse_value(&mut iter) {
         Ok(value) => match iter.next() {
-            None => Ok(()),
+            None => evaluate_value(&value, history),
             Some(str) => Err(format!("Expected end of line, instead found '{}'.", str)),
         },
         Err(msg) => Err(msg),
     }
 }
 
+fn new_prompt() {
+    print!("# ");
+    io::stdout().flush().unwrap();
+}
+
 fn main() {
     let mut history: Vec<isize> = Vec::new();
+    new_prompt();
     for line in io::stdin().lines() {
-        match line {
-            Ok(line) => match process_line(line, &mut history) {
-                Err(msg) => eprintln!("Error: {}", msg),
-                _ => {}
-            },
-            Err(e) => eprintln!("{}", e),
+        match process_line(line.unwrap(), &history) {
+            Ok(result) => {
+                history.push(result);
+                println!("{}", result);
+            }
+            Err(msg) => eprintln!("Error: {}", msg),
         }
+        new_prompt();
     }
 }
 
