@@ -78,38 +78,41 @@ enum Value {
 }
 
 fn parse_value(iter: &mut SplitWhitespace) -> Result<Value, String> {
-    match iter.next() {
-        None => Err(String::from("Expected arguments at the end of input.")),
-        Some(str) => match str {
-            var if var.chars().nth(0).unwrap_or_default() == '$' => {
-                match (&var[1..]).parse::<usize>() {
-                    Ok(idx) => Ok(Variable(idx)),
-                    Err(_) => Err(format!(
-                        "Expected valid number as a variable name, instead got '{}'.",
-                        var
-                    )),
-                }
+    let Some(str) = iter.next() else {
+        return Err(String::from("Expected arguments at the end of input."));
+    };
+
+    if str.chars().nth(0).unwrap_or_default() == '$' {
+        match (&str[1..]).parse::<usize>() {
+            Ok(idx) => Ok(Variable(idx)),
+            Err(_) => Err(format!(
+                "Expected valid number as a variable name, instead got '{}'.",
+                str
+            )),
+        }
+    } else if let Ok(int) = str.parse::<isize>() {
+        Ok(Int(int))
+    } else if let Ok(op) = BinaryOperator::from_str(str) {
+        match (parse_value(iter), parse_value(iter)) {
+            (Ok(left), Ok(right)) => Ok(BinaryOperation {
+                operator: op,
+                left: Box::new(left),
+                right: Box::new(right),
+            }),
+            (Err(_), _) | (_, Err(_)) => {
+                Err(format!("Binary operator '{}' expected two arguments.", str))
             }
-            num if num.parse::<isize>().is_ok() => Ok(Int(num.parse::<isize>().unwrap())),
-            op if BinaryOperator::from_str(op).is_ok() => match (parse_value(iter), parse_value(iter)) {
-                (Ok(left), Ok(right)) => Ok(BinaryOperation {
-                    operator: BinaryOperator::from_str(op).unwrap(),
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }),
-                (Err(_), _) | (_, Err(_)) => {
-                    Err(format!("Binary operator '{}' expected two arguments.", op))
-                }
-            },
-            op if UnaryOperator::from_str(op).is_ok() => match parse_value(iter) {
-                Ok(value) => Ok(UnaryOperation {
-                    operator: UnaryOperator::from_str(op).unwrap(),
-                    arg: Box::new(value),
-                }),
-                Err(_) => Err(format!("Unary operator '{}' expected an argument.", op))
-            }
-            _ => Err(format!("Unexpected input '{}'.", str)),
-        },
+        }
+    } else if let Ok(op) = UnaryOperator::from_str(str) {
+        match parse_value(iter) {
+            Ok(value) => Ok(UnaryOperation {
+                operator: op,
+                arg: Box::new(value),
+            }),
+            Err(_) => Err(format!("Unary operator '{}' expected an argument.", str))
+        }
+    } else {
+        Err(format!("Unexpected input '{}'.", str))
     }
 }
 
